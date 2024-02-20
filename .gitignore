@@ -12,3 +12,6 @@ output/nerf_synthetic/*
 output/nerf_synthetic/lego/*
 !output/nerf_synthetic/lego/**/
 !output/nerf_synthetic/lego/baked/**
+transforms.json
+transforms_train.json
+change_transforms.py
