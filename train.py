@@ -200,7 +200,7 @@ def main(unused_argv):
   gc.disable()  # Disable automatic garbage collection for efficiency.
   stats_trace = []
   reset_timer = True
-  print("here 6")
+  print("here ")
 
   for step, batch in zip(range(init_step, FLAGS.max_steps + 1), pdataset):
     if reset_timer:
@@ -248,7 +248,6 @@ def main(unused_argv):
         state_to_save = jax.device_get(jax.tree_map(lambda x: x[0], state))
         checkpoints.save_checkpoint(
             FLAGS.train_dir, state_to_save, int(step), keep=100)
-  print("here 7")
 
     # Test-set evaluation.
     if FLAGS.render_every > 0 and step % FLAGS.render_every == 0:
@@ -285,7 +284,6 @@ def main(unused_argv):
         # summary_writer.image("test_pred_features", pred_features, step)
         # summary_writer.image("test_pred_specular", pred_specular, step)
         # summary_writer.image("test_target", test_case["pixels"], step)
-  print("here 8")
 
   if FLAGS.max_steps % FLAGS.save_every != 0:
     state = jax.device_get(jax.tree_map(lambda x: x[0], state))
