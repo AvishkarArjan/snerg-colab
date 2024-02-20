@@ -83,7 +83,7 @@ def main(unused_argv):
   out_dir = path.join(FLAGS.train_dir,
                       "path_renders" if FLAGS.render_path else "test_preds")
   if not FLAGS.eval_once:
-    summary_writer = tensorboard.SummaryWriter(
+    # summary_writer = tensorboard.SummaryWriter(
         path.join(FLAGS.train_dir, "eval"))
   while True:
     state = checkpoints.restore_checkpoint(FLAGS.train_dir, state)
@@ -130,16 +130,16 @@ def main(unused_argv):
         utils.save_img(pred_disp[Ellipsis, 0],
                        path.join(out_dir, "disp_{:03d}.png".format(idx)))
 
-    if (not FLAGS.eval_once) and (jax.host_id() == 0):
-      summary_writer.image("pred_color", showcase_color, step)
-      summary_writer.image("pred_disp", showcase_disp, step)
-      summary_writer.image("pred_acc", showcase_acc, step)
-      summary_writer.image("pred_features", showcase_features, step)
-      summary_writer.image("pred_specular", showcase_specular, step)
-      if not FLAGS.render_path:
-        summary_writer.scalar("psnr", np.mean(np.array(psnr_values)), step)
-        summary_writer.scalar("ssim", np.mean(np.array(ssim_values)), step)
-        summary_writer.image("target", showcase_gt, step)
+    # if (not FLAGS.eval_once) and (jax.host_id() == 0):
+    #   summary_writer.image("pred_color", showcase_color, step)
+    #   summary_writer.image("pred_disp", showcase_disp, step)
+    #   summary_writer.image("pred_acc", showcase_acc, step)
+    #   summary_writer.image("pred_features", showcase_features, step)
+    #   summary_writer.image("pred_specular", showcase_specular, step)
+    #   if not FLAGS.render_path:
+    #     summary_writer.scalar("psnr", np.mean(np.array(psnr_values)), step)
+    #     summary_writer.scalar("ssim", np.mean(np.array(ssim_values)), step)
+    #     summary_writer.image("target", showcase_gt, step)
 
     if FLAGS.save_output and (not FLAGS.render_path) and (jax.host_id() == 0):
       with utils.open_file(path.join(out_dir, f"psnrs_{step}.txt"), "w") as f:

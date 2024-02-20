@@ -125,6 +125,7 @@ def train_step(model, rng, state, batch, lr):
 
 
 def main(unused_argv):
+  print("Started main fn")
   rng = random.PRNGKey(20200823)
   # Shift the numpy random seed by host_id() to shuffle data loaded by different
   # hosts.
@@ -146,7 +147,7 @@ def main(unused_argv):
   optimizer = flax.optim.Adam(FLAGS.lr_init).create(variables)
   state = utils.TrainState(optimizer=optimizer)
   del optimizer, variables
-
+  print("here 1")
   learning_rate_fn = functools.partial(
       utils.learning_rate_decay,
       lr_init=FLAGS.lr_init,
@@ -154,6 +155,7 @@ def main(unused_argv):
       max_steps=FLAGS.max_steps,
       lr_delay_steps=FLAGS.lr_delay_steps,
       lr_delay_mult=FLAGS.lr_delay_mult)
+  print("here 2")
 
   train_pstep = jax.pmap(
       functools.partial(train_step, model),
@@ -165,6 +167,7 @@ def main(unused_argv):
     return jax.lax.all_gather(
         model.apply(variables, key_0, key_1, rays, FLAGS.randomized),
         axis_name="batch")
+  print("here 3")
 
   render_pfn = jax.pmap(
       render_fn,
@@ -172,6 +175,7 @@ def main(unused_argv):
       donate_argnums=(3,),
       axis_name="batch",
   )
+  print("here 4")
 
   # Compiling to the CPU because it's faster and more accurate.
   ssim_fn = jax.jit(
@@ -184,8 +188,9 @@ def main(unused_argv):
   init_step = state.optimizer.state.step + 1
   state = flax.jax_utils.replicate(state)
 
-  if jax.host_id() == 0:
-    summary_writer = tensorboard.SummaryWriter(FLAGS.train_dir)
+  # if jax.host_id() == 0:
+    # summary_writer = tensorboard.SummaryWriter(FLAGS.train_dir)
+  print("here 5")
 
   # Prefetch_buffer_size = 3 x batch_size
   pdataset = flax.jax_utils.prefetch_to_device(dataset, 3)
@@ -195,6 +200,8 @@ def main(unused_argv):
   gc.disable()  # Disable automatic garbage collection for efficiency.
   stats_trace = []
   reset_timer = True
+  print("here 6")
+
   for step, batch in zip(range(init_step, FLAGS.max_steps + 1), pdataset):
     if reset_timer:
       t_loop_start = time.time()
@@ -211,26 +218,26 @@ def main(unused_argv):
     # only use host 0 to record results.
     if jax.host_id() == 0:
       if step % FLAGS.print_every == 0:
-        summary_writer.scalar("train_loss", stats.loss[0], step)
-        summary_writer.scalar("train_psnr", stats.psnr[0], step)
-        summary_writer.scalar("train_sparsity", stats.sparsity[0], step)
-        summary_writer.scalar("train_loss_coarse", stats.loss_c[0], step)
-        summary_writer.scalar("train_psnr_coarse", stats.psnr_c[0], step)
-        summary_writer.scalar("train_sparsity_coarse", stats.sparsity_c[0],
-                              step)
+        # summary_writer.scalar("train_loss", stats.loss[0], step)
+        # summary_writer.scalar("train_psnr", stats.psnr[0], step)
+        # summary_writer.scalar("train_sparsity", stats.sparsity[0], step)
+        # summary_writer.scalar("train_loss_coarse", stats.loss_c[0], step)
+        # summary_writer.scalar("train_psnr_coarse", stats.psnr_c[0], step)
+        # summary_writer.scalar("train_sparsity_coarse", stats.sparsity_c[0],
+                              # step)
 
-        summary_writer.scalar("weight_l2", stats.weight_l2[0], step)
+        # summary_writer.scalar("weight_l2", stats.weight_l2[0], step)
         avg_loss = np.mean(np.concatenate([s.loss for s in stats_trace]))
         avg_psnr = np.mean(np.concatenate([s.psnr for s in stats_trace]))
         stats_trace = []
-        summary_writer.scalar("train_avg_loss", avg_loss, step)
-        summary_writer.scalar("train_avg_psnr", avg_psnr, step)
-        summary_writer.scalar("learning_rate", lr, step)
+        # summary_writer.scalar("train_avg_loss", avg_loss, step)
+        # summary_writer.scalar("train_avg_psnr", avg_psnr, step)
+        # summary_writer.scalar("learning_rate", lr, step)
         steps_per_sec = FLAGS.print_every / (time.time() - t_loop_start)
         reset_timer = True
         rays_per_sec = FLAGS.batch_size * steps_per_sec
-        summary_writer.scalar("train_steps_per_sec", steps_per_sec, step)
-        summary_writer.scalar("train_rays_per_sec", rays_per_sec, step)
+        # summary_writer.scalar("train_steps_per_sec", steps_per_sec, step)
+        # summary_writer.scalar("train_rays_per_sec", rays_per_sec, step)
         precision = int(np.ceil(np.log10(FLAGS.max_steps))) + 1
         print(("{:" + "{:d}".format(precision) + "d}").format(step) +
               f"/{FLAGS.max_steps:d}: " + f"i_loss={stats.loss[0]:0.4f}, " +
@@ -241,6 +248,7 @@ def main(unused_argv):
         state_to_save = jax.device_get(jax.tree_map(lambda x: x[0], state))
         checkpoints.save_checkpoint(
             FLAGS.train_dir, state_to_save, int(step), keep=100)
+  print("here 7")
 
     # Test-set evaluation.
     if FLAGS.render_every > 0 and step % FLAGS.render_every == 0:
@@ -267,16 +275,17 @@ def main(unused_argv):
         eval_time = time.time() - t_eval_start
         num_rays = jnp.prod(jnp.array(test_case["rays"].directions.shape[:-1]))
         rays_per_sec = num_rays / eval_time
-        summary_writer.scalar("test_rays_per_sec", rays_per_sec, step)
+        # summary_writer.scalar("test_rays_per_sec", rays_per_sec, step)
         print(f"Eval {step}: {eval_time:0.3f}s., {rays_per_sec:0.0f} rays/sec")
-        summary_writer.scalar("test_psnr", psnr, step)
-        summary_writer.scalar("test_ssim", ssim, step)
-        summary_writer.image("test_pred_color", pred_color, step)
-        summary_writer.image("test_pred_disp", pred_disp, step)
-        summary_writer.image("test_pred_acc", pred_acc, step)
-        summary_writer.image("test_pred_features", pred_features, step)
-        summary_writer.image("test_pred_specular", pred_specular, step)
-        summary_writer.image("test_target", test_case["pixels"], step)
+        # summary_writer.scalar("test_psnr", psnr, step)
+        # summary_writer.scalar("test_ssim", ssim, step)
+        # summary_writer.image("test_pred_color", pred_color, step)
+        # summary_writer.image("test_pred_disp", pred_disp, step)
+        # summary_writer.image("test_pred_acc", pred_acc, step)
+        # summary_writer.image("test_pred_features", pred_features, step)
+        # summary_writer.image("test_pred_specular", pred_specular, step)
+        # summary_writer.image("test_target", test_case["pixels"], step)
+  print("here 8")
 
   if FLAGS.max_steps % FLAGS.save_every != 0:
     state = jax.device_get(jax.tree_map(lambda x: x[0], state))
