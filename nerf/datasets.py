@@ -217,7 +217,7 @@ class Blender(Dataset):
     for i in range(len(meta["frames"])):
       frame = meta["frames"][i]
       data_dir = Path(args.data_dir)
-      fname = data_dir.joinpath(frame["file_path"] )
+      fname = data_dir.joinpath(frame["file_path"] + ".png")
       with utils.open_file(fname, "rb") as imgin:
         image = np.array(Image.open(imgin), dtype=np.float32) / 255.
         if args.factor == 2:
